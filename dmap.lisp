@@ -1,6 +1,6 @@
-;;;-*- Mode: common-lisp; syntax: common-lisp; package: nmop; base: 10 -*-
+;;;-*- Mode: common-lisp; syntax: common-lisp; package: cbr; base: 10 -*-
 ;;;
-;;;; New Memory Organization Package (New MOP) DMAP Module
+;;;; New Memory Organization Package (MOP) DMAP Module
 ;;;
 ;;; Copyright (c) 2016 Seiji Koide <koide@ontolonomy.co.jp>
 ;;; This software is provided under the FreeBSD lisence, excepting 
@@ -35,14 +35,13 @@
 ;; --- history ---
 ;; 2016/12/30: file created.
 
-(cl:defpackage newmop
-  (:nicknames nmop)
+(cl:defpackage cbr
   (:use cl)
   (:export 
    )
   )
 
-(in-package nmop)
+(in-package :cbr)
 
 (define-table mop-preds (mop) (mop-table 'preds))
 

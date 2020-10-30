@@ -1,6 +1,6 @@
-;;;-*- Mode: common-lisp; syntax: common-lisp; package: nmop; base: 10 -*-
+;;;-*- Mode: common-lisp; syntax: common-lisp; package: cbr; base: 10 -*-
 ;;;
-;;;; New Memory Organization Package (New MOP) Build Package
+;;;; New Memory Organization Package (MOP) Build Package
 ;;;
 ;;; Copyright (c) 2016 Seiji Koide <koide@ontolonomy.co.jp>
 ;;; This software is provided under the FreeBSD lisence, excepting 
@@ -35,15 +35,14 @@
 ;; --- history ---
 ;; 2016/12/27: file created.
 
-(cl:defpackage newmop
-  (:nicknames nmop)
+(cl:defpackage cbr
   (:use cl)
   (:export #:*application-home* 
            #:mop-absts #:mop-all-absts #:mop-specs #:mop-type
    )
   )
 
-(in-package nmop)
+(in-package :cbr)
 
 ;;; ====================================================================
 ;;;   Build up module as stub between old MOP and new MOP modules

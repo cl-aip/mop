@@ -1,8 +1,8 @@
-;;;-*- Mode: common-lisp; syntax: common-lisp; package: nmop; base: 10 -*-
+;;;-*- Mode: common-lisp; syntax: common-lisp; package: cbr; base: 10 -*-
 ;;;
-;;;; New Memory Organization Package (New MOP) Module
+;;;; New Memory Organization Package (MOP) Module
 ;;;
-;;; Copyright (c) 2016 Seiji Koide <koide@ontolonomy.co.jp>
+;;; Copyright (c) 2016-2019 Seiji Koide <koide@ontolonomy.co.jp>
 ;;; This software is provided under the FreeBSD lisence, excepting 
 ;;; the part of coded by Christopher K. Riesbeck and Roger C. Schank in 
 ;;; "INSIDE CASE-BASED REASONING" 1989, LEA.
@@ -35,17 +35,16 @@
 ;; --- history ---
 ;; 2016/12/24: file created.
 
-(cl:provide :nmop)
+(cl:provide :mop)
 
-(cl:defpackage newmop
-  (:nicknames nmop)
+(cl:defpackage cbr
   (:use cl)
   (:export #:*application-home* 
            #:mop-absts #:mop-all-absts #:mop-specs #:mop-type
    )
   )
 
-(in-package nmop)
+(in-package :cbr)
 
 (defparameter *application-home*
   (make-pathname :name nil
@@ -80,6 +79,34 @@
 (define-table mop-specs (mop) (mop-table 'specs))
 (define-table mop-slots (mop) (mop-table 'slots))
 (define-table mop-type (mop) (mop-table 'type))
+
+#|
+(in-package :cbr)
+(progn
+(setf (mop-type 'thing) 'mop)
+(setf (mop-type 'dwelling) 'mop)
+(setf (mop-absts 'dwelling) 'thing)
+(setf (mop-type 'apartment) 'mop)
+(setf (mop-absts 'apartment)'dwelling)
+(setf (mop-type 'apt-at-100-york) 'mop)
+(setf (mop-absts 'apt-at-100-york) 'apartment)
+(setf (mop-slots 'apt-at-100-york) '((street-name york)))
+(setf (mop-slots 'apt-at-100-york) '((street-number 100)))
+(setf (mop-slots 'apt-at-100-york) '((wall-color white)))
+(setf (mop-slots 'apt-at-100-york) '((floor-surface wood)))
+(setf (mop-type 'apt1) 'instance)
+(setf (mop-absts 'apt1) 'apt-at-100-york)
+(setf (mop-slots 'apt1) '((number-of-rooms 3)))
+)
+
+(mopp 'apt1)
+(instance-mopp 'apt1)
+(mop-absts 'apt1)
+(mop-slots 'apt1)
+(role-filler 'number-of-rooms 'apt1)
+(role-filler 'wall-color 'apt1)
+(add-role-filler 'wall-color 'apt1 'green)
+|#
 
 (defun mopp (x)
   (or (numberp x) (and (symbolp x) (mop-type x))))
