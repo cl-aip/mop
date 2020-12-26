@@ -2,7 +2,7 @@
 ;;;
 ;;;; New Memory Organization Package (MOP) Module
 ;;;
-;;; Copyright (c) 2016-2019 Seiji Koide <koide@ontolonomy.co.jp>
+;;; Copyright (c) 2016-2020 Seiji Koide <koide@ontolonomy.co.jp>
 ;;; This software is provided under the FreeBSD lisence, excepting 
 ;;; the part of coded by Christopher K. Riesbeck and Roger C. Schank in 
 ;;; "INSIDE CASE-BASED REASONING" 1989, LEA.
@@ -150,6 +150,21 @@
           (mop-slots mop)))
   filler)
 
+(defun calc-all-absts (mop)
+  "calculates a list of all the abstractions for <mop>.
+   We assume that all the abstractions are correct for the immediate abstractions of <mop>, 
+   so all we have to do is get those abstractions, with <mop-all-absts>, add <mop> itself to 
+   the front of the list, and remove duplicates."
+  (remove-duplicates
+   (cons mop
+         (loop for abst in (mop-absts mop)
+             append (mop-all-absts abst)))))
+
+(defun redo-all-absts (mop)
+  (setf (mop-all-absts mop) (calc-all-absts mop))
+  (loop for spec in (mop-specs mop)
+      do (redo-all-absts spec)))
+
 (defun link-abst (spec abst)
   (assert (abst-mopp abst) () "LINK-ABST: abst ~S must be an abstraction." abst)
   (assert (mopp spec) () "LINK-ABST: spec ~S must be a mop." spec)
@@ -173,20 +188,29 @@
          (redo-all-absts spec)))
   spec)
 
-(defun calc-all-absts (mop)
-  "calculates a list of all the abstractions for <mop>.
-   We assume that all the abstractions are correct for the immediate abstractions of <mop>, 
-   so all we have to do is get those abstractions, with <mop-all-absts>, add <mop> itself to 
-   the front of the list, and remove duplicates."
-  (remove-duplicates
-   (cons mop
-         (loop for abst in (mop-absts mop)
-             append (mop-all-absts abst)))))
+(defun inherit-filler (role mop)
+  (loop for abst in (mop-all-absts mop)
+      thereis (role-filler role abst)))
 
-(defun redo-all-absts (mop)
-  (setf (mop-all-absts mop) (calc-all-absts mop))
-  (loop for spec in (mop-specs mop)
-      do (redo-all-absts spec)))
+(defun get-filler (role mop)
+  (or (role-filler role mop)
+      (let ((filler (inherit-filler role mop)))
+        (and filler
+             (or (and (instance-mopp filler) filler)
+                 (and (abstp 'm-function filler) filler)
+                 (let ((fn (get-filler 'calc-fn filler)))
+                   (and fn
+                        (let ((new-filler (funcall fn filler mop)))
+                          (and new-filler
+                               (add-role-filler role mop new-filler))))))))))
+
+(defun slots-abstp (mop slots)
+  (and (abst-mopp mop)
+       (not (null (mop-slots mop)))
+       (loop for slot in (mop-slots mop)
+           always (satisfiedp (slot-filler slot)
+                              (get-filler (slot-role slot) slots)
+                              slots))))
 
 (defun satisfiedp (constraint filler slots)
   (cond ((null constraint))
@@ -198,26 +222,7 @@
         (filler (slots-abstp constraint filler))
         (t nil)))
 
-(defun slots-abstp (mop slots)
-  (and (abst-mopp mop)
-       (not (null (mop-slots mop)))
-       (loop for slot in (mop-slots mop)
-           always (satisfiedp (slot-filler slot)
-                              (get-filler (slot-role slot) slots)
-                              slots))))
 
-(defun new-mop (name absts type slots)
-  (assert (symbolp name) () "NEW-MOP: name ~S must be a lisp symbol." name)
-  (assert (loop for abst in absts always (mopp abst)) () "NEW-MOP: one of absts is not a mop.")
-;;;  (and (or (symbolp name) (error "~S failed in ~S" '(symbolp name) 'new-mop))
-;;;       (or (for (abst :in absts) :always (mopp abst))
-;;;           (error "~S failed in ~S" '(for (abst :in absts) :always (mopp abst)) 'new-mop)))
-  (or type (setf type (calc-type absts slots)))
-  (or name (setf name (spec-name absts type)))
-  (setf (mop-type name) type)
-  (and slots (setf (mop-slots name) slots))
-  (loop for abst in absts do (link-abst name abst))
-  name)
 
 (defun calc-type (absts slots)
   (or (loop for abst in absts
@@ -233,6 +238,21 @@
   (gentemp (format nil (cond ((eql type 'mop) "~S.")
                              (t "I-~S."))
              (car absts))))
+
+(defun new-mop (name absts type slots)
+  (assert (symbolp name) () "NEW-MOP: name ~S must be a lisp symbol." name)
+  (assert (loop for abst in absts always (mopp abst)) () "NEW-MOP: one of absts is not a mop.")
+;;;  (and (or (symbolp name) (error "~S failed in ~S" '(symbolp name) 'new-mop))
+;;;       (or (for (abst :in absts) :always (mopp abst))
+;;;           (error "~S failed in ~S" '(for (abst :in absts) :always (mopp abst)) 'new-mop)))
+  (or type (setf type (calc-type absts slots)))
+  (or name (setf name (spec-name absts type)))
+  (setf (mop-type name) type)
+  (and slots (setf (mop-slots name) slots))
+  (loop for abst in absts do (link-abst name abst))
+  name)
+
+
 
 (defun clear-memory ()
   (setf *mop-tables* nil)
@@ -252,21 +272,7 @@
            (delete-key (mop-table table-name)
                        name))))
 
-(defun inherit-filler (role mop)
-  (loop for abst in (mop-all-absts mop)
-      thereis (role-filler role abst)))
 
-(defun get-filler (role mop)
-  (or (role-filler role mop)
-      (let ((filler (inherit-filler role mop)))
-        (and filler
-             (or (and (instance-mopp filler) filler)
-                 (and (abstp 'm-function filler) filler)
-                 (let ((fn (get-filler 'calc-fn filler)))
-                   (and fn
-                        (let ((new-filler (funcall fn filler mop)))
-                          (and new-filler
-                               (add-role-filler role mop new-filler))))))))))
 
 (defun path-filler (path mop)
   (and (loop for role in path
@@ -296,6 +302,11 @@
                   thereis (when (not (eql spec mop))
                             (mop-equalp spec mop)))))
 
+(defun mops-abstp (mops instance)
+  (not (null (loop for mop in mops
+                 when (slots-abstp mop instance)
+                 collect (link-abst instance mop)))))
+
 ;;;(defun refine-instance (instance)
 ;;;  (for (abst :in (mop-absts instance))
 ;;;       :when (mops-abstp (mop-specs abst) instance)
@@ -308,10 +319,21 @@
           (unlink-abst instance abst)
           (refine-instance instance))))
 
-(defun mops-abstp (mops instance)
-  (not (null (loop for mop in mops
-                 when (slots-abstp mop instance)
-                 collect (link-abst instance mop)))))
+
+(defun legal-abstp (abst instance)
+  (declare (ignore instance))
+  (and (mop-slots abst)
+       (loop for spec in (mop-specs abst)
+           always (instance-mopp spec))))
+
+
+
+
+(defun has-legal-absts-p (instance)
+  (loop for abst in (mop-absts instance)
+      when (not (legal-abstp abst instance))
+      do (unlink-abst instance abst))
+  (mop-absts instance))
 
 (defun install-instance (instance)
   (refine-instance instance)
@@ -320,22 +342,6 @@
           ((has-legal-absts-p instance) instance)
           (t (remove-mop instance) nil))))
 
-(defun has-legal-absts-p (instance)
-  (loop for abst in (mop-absts instance)
-      when (not (legal-abstp abst instance))
-      do (unlink-abst instance abst))
-  (mop-absts instance))
-
-(defun legal-abstp (abst instance)
-  (declare (ignore instance))
-  (and (mop-slots abst)
-       (loop for spec in (mop-specs abst)
-           always (instance-mopp spec))))
-
-(defun install-abstraction (mop)
-  (let ((twin (get-twin mop)))
-    (cond (twin (remove-mop mop) twin)
-          (t (reindex-siblings mop)))))
 
 (defun reindex-siblings (mop)
   (loop for abst in (mop-absts mop)
@@ -345,6 +351,12 @@
              do (unlink-abst spec abst)
                (link-abst spec mop)))
   mop)
+
+(defun install-abstraction (mop)
+  (let ((twin (get-twin mop)))
+    (cond (twin (remove-mop mop) twin)
+          (t (reindex-siblings mop)))))
+
 
 (defun slots->mop (slots absts must-work)
   (assert (and (not (null absts)) (loop for abst in absts always (mopp abst)))
@@ -405,6 +417,13 @@
 (defun group-size (x)
   (and (groupp x) (length (mop-slots x))))
 
+(defun make-m-n (m n)
+  (assert (integerp m) () "MAKE-M-N: the first parameter is not integer.")
+  (assert (integerp n) () "MAKE-M-N: the second parameter is not integer.")
+  (cond ((eql m n) (list n))
+        ((< m n) (cons m (make-m-n (+ m 1) n)))
+        (t (cons m (make-m-n (- m 1) n)))))
+
 (defun group->list (group)
   (and group
        (groupp group)
@@ -421,22 +440,20 @@
             '(m-group)
             t))))
 
-(defun make-m-n (m n)
-  (assert (integerp m) () "MAKE-M-N: the first parameter is not integer.")
-  (assert (integerp n) () "MAKE-M-N: the second parameter is not integer.")
-  (cond ((eql m n) (list n))
-        ((< m n) (cons m (make-m-n (+ m 1) n)))
-        (t (cons m (make-m-n (- m 1) n)))))
-
-(defun dah (mop)
-  (pprint (tree->list mop #'specs->list nil)))
-
-(defun dph (mop)
-  (pprint (tree->list mop #'slots->forms nil)))
+(defun tree->list (mop fn visited)
+  (cond ((member mop visited) (list mop))
+        (t (setf visited (cons mop visited))
+           `(,mop ,@(funcall fn mop visited)))))
 
 (defun specs->list (mop visited)
   (loop for spec in (mop-specs mop)
       collect (tree->list spec #'specs->list visited)))
+
+(defun dah (mop)
+  (pprint (tree->list mop #'specs->list nil)))
+
+(defun mop->form (mop visited)
+  (tree->list mop #'slots->forms visited))
 
 (defun slots->forms (mop visited)
   (loop for slot in (mop-slots mop)
@@ -444,13 +461,9 @@
                     (mop->form (slot-filler slot)
                                visited))))
 
-(defun mop->form (mop visited)
-  (tree->list mop #'slots->forms visited))
+(defun dph (mop)
+  (pprint (tree->list mop #'slots->forms nil)))
 
-(defun tree->list (mop fn visited)
-  (cond ((member mop visited) (list mop))
-        (t (setf visited (cons mop visited))
-           `(,mop ,@(funcall fn mop visited)))))
 
 (defun show-mop (mop)
   `(,(mop-type mop) ,mop ,(mop-absts mop)
