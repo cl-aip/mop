@@ -64,10 +64,6 @@
 (defmop m-act (m-root))
 (defmop m-actor (m-root))
 
-(defmop m-group (m-root))
-(defmop m-empty-group (m-group))
-(defmop i-m-empty-group (m-empty-group) instance)
-
 ;;;
 ;;; Constraint Function
 ;;;
@@ -79,6 +75,18 @@
 (defmop m-pattern (m-root)
   (abst-fn constraint-fn))
 (defmop not-constraint (constraint-fn))
+
+(defun constraint-fn (constraint filler slots)
+  (declare (ignore constraint filler slots))
+  "always returns true, that is, there is no constraint on <filler>."
+  t)
+
+(defun not-constraint (constraint filler slots)
+  "is true if <filler> does not satisfy the constraint found in the
+   <object> slot of <constraint>."
+  (assert (not (null filler)) () "NOT-CONSTRAINT: The filler is null.")
+  (not (satisfiedp (get-filler 'object constraint)
+                   filler slots)))
 
 ;;;
 ;;; Getting Deamon
@@ -95,18 +103,6 @@
   (abst-fn not-constraint))
 (defmop m-failed-solution (m-root))
 
-(defun constraint-fn (constraint filler slots)
-  (declare (ignore constraint filler slots))
-  "always returns true, that is, there is no constraint on <filler>."
-  t)
-
-(defun not-constraint (constraint filler slots)
-  "is true if <filler> does not satisfy the constraint found in the
-   <object> slot of <constraint>."
-  (assert (not (null filler)) () "NOT-CONSTRAINT: The filler is null.")
-  (not (satisfiedp (get-filler 'object constraint)
-                   filler slots)))
-
 (defun get-sibling (pattern mop)
   (declare (ignore pattern))
   "finds a sibling of <mop>. This function don't look for instance mops,
@@ -119,7 +115,7 @@
                          (not (eql spec mop))
                          (not (abstp 'm-failed-solution spec)))
                 spec))))
-#|
+
 ;;;
 ;;; Sequence
 ;;;
@@ -129,7 +125,7 @@
 
 (defmop m-sequence (m-root))
 (defmop m-empty-sequence (m-sequence))
-(definstance empty-sequence (m-empty-sequence))
+(definstance I-m-empty-sequence (m-empty-sequence))
 
 ;;; --------------------------------------------------------------------
 ;;;  Sequence MOP
@@ -142,8 +138,8 @@
 (defun list->sequence (l)
   "returns a sequence mop with members from <list>. The first element of 
    <list> fills the first role, the second fills the second role, and so on. 
-   If the list is empty, the instance mop EMPTY-SEQUENCE is returned."
-  (if (null l) 'm-empty-sequence
+   If the list is empty, the instance mop I-M-EMPTY-SEQUENCE is returned."
+  (if (null l) 'I-m-empty-sequence
       (slots->mop
        (loop for x in l
              for i from 1 to (length l)
@@ -160,9 +156,9 @@
    role, of second role, and so on."
   (and sequence
        (progn (assert (sequencep sequence) () "SEQUENCE->LIST: illegal MOP.") t)
-       (loop for index from 1 to (sequence-size sequence) with filler
-             when (setq filler (role-filler index sequence))
-             collect filler)))
+       (loop for index from 1 to (sequence-size sequence)
+             when (role-filler index sequence)
+             collect it)))
 
 (defun sequence-member (mop sequence)
   "returns true if <mop> is a member of <sequence>."
@@ -186,6 +182,15 @@
         ((sequence-member mop sequence) sequence)
         (t (list->sequence (append (sequence->list sequence) (list mop))))))
 
+;;;
+;;; Group
+;;;
+
+(defmop m-group (m-root))
+(defmop m-empty-group (m-group))
+(defmop I-m-empty-group (m-empty-group) instance)
+
+#|
 ;;;
 ;;; Setting and Adding Deamon
 ;;;

@@ -42,7 +42,7 @@
    )
   )
 
-(in-package cbr)
+(in-package :cbr)
 
 ;;; ====================================================================
 ;;;   Micro Judge module for new MOP system
@@ -363,8 +363,8 @@
 ;;;
 
 (definstance sentence (m-role))
-(definstance old-severity (m-role))   ; needed becase of (:to :old-severity)
-(definstance this-severity (m-role))  ; needed becase of (:to :this-severity)
+(definstance old-severity (m-role))   ; needed becase of (to old-severity)
+(definstance this-severity (m-role))  ; needed becase of (to this-severity)
 
 
 (defmop adjust-sentence (m-function))

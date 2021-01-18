@@ -1,12 +1,11 @@
-;; -*- lisp-version: "9.0 [64-bit Windows *SMP*] (Jan 17, 2019 21:16)"; cg: "9.0"; -*-
+;; -*- lisp-version: "9.0 [64-bit Windows *SMP*] (Jun 8, 2020 11:42)"; cg: "9.0"; -*-
 
 (in-package :cg-user)
 
 (define-project :name :mop
   :modules (list (make-instance 'module :name "mop.lisp")
                  (make-instance 'module :name "build.lisp")
-                 (make-instance 'module :name "judge.lisp")
-                 (make-instance 'module :name "dmap.lisp"))
+                 (make-instance 'module :name "judge.lisp"))
   :projects nil
   :libraries nil
   :editable-files nil

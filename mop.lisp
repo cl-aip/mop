@@ -222,8 +222,6 @@
         (filler (slots-abstp constraint filler))
         (t nil)))
 
-
-
 (defun calc-type (absts slots)
   (or (loop for abst in absts
           when (patternp abst)
@@ -252,7 +250,9 @@
   (loop for abst in absts do (link-abst name abst))
   name)
 
-
+;;;
+;;;
+;;;
 
 (defun clear-memory ()
   (setf *mop-tables* nil)
@@ -272,8 +272,6 @@
            (delete-key (mop-table table-name)
                        name))))
 
-
-
 (defun path-filler (path mop)
   (and (loop for role in path
            always (setf mop (get-filler role mop)))
@@ -291,11 +289,6 @@
   (and (mop-includesp mop2 mop1)
        (mop-includesp mop1 mop2)))
 
-;;;(defun get-twin (mop)
-;;;  (for (abst :in (mop-absts mop))
-;;;       :first (for (spec :in (mop-specs abst))
-;;;                   :when (not (eql spec mop))
-;;;                   :first (mop-equalp spec mop))))
 (defun get-twin (mop)
   (loop for abst in (mop-absts mop)
       thereis (loop for spec in (mop-specs abst)
@@ -307,11 +300,6 @@
                  when (slots-abstp mop instance)
                  collect (link-abst instance mop)))))
 
-;;;(defun refine-instance (instance)
-;;;  (for (abst :in (mop-absts instance))
-;;;       :when (mops-abstp (mop-specs abst) instance)
-;;;       :first (unlink-abst instance abst)
-;;;       (refine-instance instance)))
 (defun refine-instance (instance)
   (loop for abst in (mop-absts instance)
       thereis
@@ -319,15 +307,11 @@
           (unlink-abst instance abst)
           (refine-instance instance))))
 
-
 (defun legal-abstp (abst instance)
   (declare (ignore instance))
   (and (mop-slots abst)
        (loop for spec in (mop-specs abst)
            always (instance-mopp spec))))
-
-
-
 
 (defun has-legal-absts-p (instance)
   (loop for abst in (mop-absts instance)
@@ -361,9 +345,6 @@
 (defun slots->mop (slots absts must-work)
   (assert (and (not (null absts)) (loop for abst in absts always (mopp abst)))
           () "SLOTS->MOP: Illegal absts given ~S." absts)
-;;;  (insist slots->mop
-;;;          (not (null absts))
-;;;          (for (abst :in absts) :always (mopp abst)))
   (or (and (null slots) (null (cdr absts)) (car absts))
       (let ((type (and slots (atom (car slots)) (car slots))))
         (and type (setf slots (cdr slots)))
@@ -373,7 +354,7 @@
                         (install-instance mop))
                        (t (install-abstraction mop)))))
             (assert (or result (null must-work)) () "SLOTS->MOP: null result cannot be accepted in this case.")
-            (unless result (warn "Null result is obtained in SLOTS->MOP."))
+;;;            (unless result (warn "Null result is obtained in SLOTS->MOP."))
             result)))))
 
 (defmacro defmop (name absts &rest args)
@@ -432,7 +413,7 @@
            collect it)))
 
 (defun list->group (l)
-  (cond ((null l) 'I-M-EMPTY-GROUP)
+  (cond ((null l) 'I-m-empty-group)
         (t (slots->mop
             (loop for x in l
                   for i in (make-m-n 1 (length l))
@@ -463,7 +444,6 @@
 
 (defun dph (mop)
   (pprint (tree->list mop #'slots->forms nil)))
-
 
 (defun show-mop (mop)
   `(,(mop-type mop) ,mop ,(mop-absts mop)
